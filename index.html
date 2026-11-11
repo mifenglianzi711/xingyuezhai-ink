@@ -205,6 +205,41 @@
   }
   .chip:hover{ color: var(--accent); border-color: var(--accent); }
 
+  /* —— 分类折叠 —— */
+  .fold-toggle{
+    margin-left: auto;
+    font: inherit; font-size: 13px;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+    border-radius: 999px;
+    padding: 4px 12px;
+    cursor: pointer;
+  }
+  .fold-toggle:hover{ background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .fold-toggle[hidden]{ display: none; }
+  .cat-groups{ display: flex; flex-direction: column; padding-bottom: 56px; }
+  .cat-group{ border-top: 1px solid var(--line); }
+  .cat-group:first-child{ border-top: 0; }
+  .cat-head{
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    font: inherit; text-align: left; cursor: pointer;
+    background: transparent; border: 0; margin: 0;
+    padding: 14px 2px 12px;
+  }
+  .cat-name{ font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: .06em; color: var(--ink); }
+  .cat-n{ font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .chev{ margin-left: auto; width: 18px; height: 18px; flex: none; color: var(--ink-soft); transition: transform .18s ease; }
+  .cat-head[aria-expanded="true"] .chev{ transform: rotate(180deg); }
+  .cat-head:hover .cat-name{ color: var(--accent); }
+  .cat-body{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+    gap: 16px;
+    padding: 2px 2px 18px;
+  }
+  .cat-body[hidden]{ display: none; }
+
   .empty{
     text-align: center;
     color: var(--ink-soft);
@@ -648,7 +683,7 @@
     <div class="tabs" id="tabs" role="group" aria-label="分类筛选"></div>
   </div>
 
-  <div class="resultbar">共 <b id="count">0</b> 条</div>
+  <div class="resultbar">共 <b id="count">0</b> 条<button class="fold-toggle" id="foldToggle" hidden>全部展开</button></div>
   <div class="grid" id="list"></div>
   <div class="empty" id="empty" hidden>
     <div class="big">没有匹配的条目</div>
@@ -794,6 +829,8 @@ const els = {
   empty: document.getElementById('empty'),
 };
 let activeCat = 'all';
+const narrowMQ = window.matchMedia('(max-width: 680px)');
+const collapsed = new Set(narrowMQ.matches ? CATS.map(c => c.key) : []);
 
 function norm(s){ return (s || '').toLowerCase().replace(/[《》「」·\s]/g, ''); }
 function hay(e){ return [e.name, e.meta, e.body, e.source, e.cat].concat(e.tags || []).join(' ').toLowerCase(); }
@@ -815,8 +852,40 @@ function render(){
   });
   els.count.textContent = rows.length;
   els.empty.hidden = rows.length !== 0;
-  els.list.innerHTML = rows.map(card).join('');
+  const fold = document.getElementById('foldToggle');
+  if(activeCat === 'all' && !q){
+    fold.hidden = false;
+    els.list.classList.remove('grid');
+    els.list.innerHTML = renderGroups(rows);
+  } else {
+    fold.hidden = true;
+    els.list.classList.add('grid');
+    els.list.innerHTML = rows.map(card).join('');
+  }
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-pressed', t.dataset.cat === activeCat));
+}
+
+function renderGroups(rows){
+  const allOpen = CATS.every(c => !collapsed.has(c.key));
+  document.getElementById('foldToggle').textContent = allOpen ? '全部收起' : '全部展开';
+  return '<div class="cat-groups">' + CATS.map(c => {
+    const items = rows.filter(e => e.cat === c.key);
+    if(!items.length) return '';
+    const open = !collapsed.has(c.key);
+    return `<section class="cat-group" data-group="${c.key}">
+      <button class="cat-head" aria-expanded="${open}" data-group="${c.key}">
+        <span class="cat-name">${c.label}</span>
+        <span class="cat-n">${items.length} 条</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="cat-body"${open ? '' : ' hidden'}>${items.map(card).join('')}</div>
+    </section>`;
+  }).join('') + '</div>';
+}
+
+function updateFoldButton(){
+  const allOpen = CATS.every(c => !collapsed.has(c.key));
+  document.getElementById('foldToggle').textContent = allOpen ? '全部收起' : '全部展开';
 }
 
 function card(e){
@@ -840,6 +909,28 @@ els.tabs.addEventListener('click', ev => {
   const t = ev.target.closest('.tab');
   if(!t) return;
   activeCat = t.dataset.cat;
+  render();
+});
+els.list.addEventListener('click', ev => {
+  const head = ev.target.closest('.cat-head');
+  if(!head) return;
+  const key = head.dataset.group;
+  const body = head.parentElement.querySelector('.cat-body');
+  if(collapsed.has(key)){
+    collapsed.delete(key);
+    head.setAttribute('aria-expanded', 'true');
+    body.hidden = false;
+  } else {
+    collapsed.add(key);
+    head.setAttribute('aria-expanded', 'false');
+    body.hidden = true;
+  }
+  updateFoldButton();
+});
+document.getElementById('foldToggle').addEventListener('click', () => {
+  const allOpen = CATS.every(c => !collapsed.has(c.key));
+  if(allOpen){ CATS.forEach(c => collapsed.add(c.key)); }
+  else { collapsed.clear(); }
   render();
 });
 document.addEventListener('click', ev => {
