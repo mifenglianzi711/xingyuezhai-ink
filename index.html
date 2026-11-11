@@ -162,18 +162,25 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 18px 20px;
     min-width: 0;
-    display: flex; flex-direction: column; gap: 9px;
+    display: flex; flex-direction: column;
   }
+  .card-head{
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    font: inherit; text-align: left; cursor: pointer;
+    background: transparent; border: 0; margin: 0;
+    padding: 16px 18px;
+  }
+  .card-head:focus-visible{ outline: 2px solid var(--accent); outline-offset: -2px; }
   .badge{
-    align-self: flex-start;
+    flex: none;
     font-size: 12px; letter-spacing: .1em;
     color: var(--accent);
     border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
     border-radius: 4px;
     padding: 2px 8px;
   }
+  .card-title{ display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
   .name{
     font-family: var(--font-display);
     font-weight: 600;
@@ -183,6 +190,13 @@
     text-wrap: balance;
   }
   .meta{ font-size: 13px; color: var(--ink-soft); }
+  .card-chev{ flex: none; width: 18px; height: 18px; color: var(--ink-soft); transition: transform .18s ease; }
+  .card[data-open="true"] .card-chev{ transform: rotate(180deg); }
+  .card-body{
+    display: flex; flex-direction: column; gap: 9px;
+    padding: 2px 18px 18px;
+  }
+  .card-body[hidden]{ display: none; }
   .body{ margin: 0; font-size: 14.5px; color: var(--ink); }
   .source{
     font-size: 12.5px; color: var(--ink-soft);
@@ -831,6 +845,7 @@ const els = {
 };
 let activeCat = 'all';
 const collapsed = new Set(CATS.slice(1).map(c => c.key));
+const cardCollapsed = window.matchMedia('(max-width: 680px)').matches;
 
 function norm(s){ return (s || '').toLowerCase().replace(/[《》「」·\s]/g, ''); }
 function hay(e){ return [e.name, e.meta, e.body, e.source, e.cat].concat(e.tags || []).join(' ').toLowerCase(); }
@@ -894,14 +909,22 @@ function card(e){
   const tags = (e.tags || []).map(t => `<button class="chip" data-search="${t}">${t}</button>`).join('');
   const src = e.source ? `<div class="source"><span>版本</span>${e.source}</div>` : '';
   const read = e.book ? `<button class="read-btn" data-book="${e.book}">在线阅读 →</button>` : '';
-  return `<article class="card">
-    <span class="badge">${badge.short}</span>
-    <h3 class="name">${e.name}</h3>
-    ${e.meta ? `<div class="meta">${e.meta}</div>` : ''}
-    <p class="body">${e.body}</p>
-    ${src}
-    ${tags ? `<div class="tags">${tags}</div>` : ''}
-    ${read}
+  const open = !cardCollapsed;
+  return `<article class="card" data-open="${open}">
+    <button class="card-head" aria-expanded="${open}">
+      <span class="badge">${badge.short}</span>
+      <span class="card-title">
+        <span class="name">${e.name}</span>
+        ${e.meta ? `<span class="meta">${e.meta}</span>` : ''}
+      </span>
+      <svg class="card-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="card-body"${open ? '' : ' hidden'}>
+      <p class="body">${e.body}</p>
+      ${src}
+      ${tags ? `<div class="tags">${tags}</div>` : ''}
+      ${read}
+    </div>
   </article>`;
 }
 
@@ -914,19 +937,30 @@ els.tabs.addEventListener('click', ev => {
 });
 els.list.addEventListener('click', ev => {
   const head = ev.target.closest('.cat-head');
-  if(!head) return;
-  const key = head.dataset.group;
-  const body = head.parentElement.querySelector('.cat-body');
-  if(collapsed.has(key)){
-    collapsed.delete(key);
-    head.setAttribute('aria-expanded', 'true');
-    body.hidden = false;
-  } else {
-    collapsed.add(key);
-    head.setAttribute('aria-expanded', 'false');
-    body.hidden = true;
+  if(head){
+    const key = head.dataset.group;
+    const body = head.parentElement.querySelector('.cat-body');
+    if(collapsed.has(key)){
+      collapsed.delete(key);
+      head.setAttribute('aria-expanded', 'true');
+      body.hidden = false;
+    } else {
+      collapsed.add(key);
+      head.setAttribute('aria-expanded', 'false');
+      body.hidden = true;
+    }
+    updateFoldButton();
+    return;
   }
-  updateFoldButton();
+  const chead = ev.target.closest('.card-head');
+  if(chead){
+    const card = chead.parentElement;
+    const body = card.querySelector('.card-body');
+    const open = card.getAttribute('data-open') === 'true';
+    card.setAttribute('data-open', String(!open));
+    chead.setAttribute('aria-expanded', String(!open));
+    body.hidden = open;
+  }
 });
 document.getElementById('foldToggle').addEventListener('click', () => {
   const allOpen = CATS.every(c => !collapsed.has(c.key));
