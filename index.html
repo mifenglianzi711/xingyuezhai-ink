@@ -289,11 +289,27 @@
     font-family: var(--font-display); font-weight: 600; font-size: 16px;
     margin: 0 0 14px; letter-spacing: .08em;
   }
+  .ov-block > h3.ov-toggle{
+    display: flex; align-items: center;
+    cursor: pointer; user-select: none;
+  }
   .ov-block > h3::before{
     content: ""; display: inline-block; width: 8px; height: 8px;
     background: var(--accent); border-radius: 2px; margin-right: 9px;
-    transform: rotate(45deg); vertical-align: 2px;
+    transform: rotate(45deg);
+    flex: none;
   }
+  .ov-block > h3.ov-toggle::after{
+    content: ""; flex: none; margin-left: auto;
+    width: 8px; height: 8px;
+    border-right: 2px solid var(--ink-soft);
+    border-bottom: 2px solid var(--ink-soft);
+    transform: rotate(45deg);
+    transition: transform .18s ease;
+  }
+  .ov-block > h3.ov-toggle[aria-expanded="true"]::after{ transform: rotate(-135deg); }
+  .ov-block > h3.ov-toggle:hover{ color: var(--accent); }
+  .ov-body[hidden]{ display: none; }
 
   /* 时间轴 */
   .timeline{ overflow-x: auto; padding: 8px 2px 10px; }
@@ -1027,6 +1043,38 @@ tocDrawer.addEventListener('click', ev => {
   }
   if(ev.target.closest('[data-toc-close]')) tocDrawer.hidden = true;
 });
+
+// 总览区块折叠
+(function(){
+  const MOBILE = window.matchMedia('(max-width: 680px)').matches;
+  document.querySelectorAll('.ov-block').forEach(block => {
+    const h3 = block.querySelector(':scope > h3');
+    if(!h3) return;
+    const nodes = [];
+    let el = h3.nextElementSibling;
+    while(el){ nodes.push(el); el = el.nextElementSibling; }
+    if(!nodes.length) return;
+    const body = document.createElement('div');
+    body.className = 'ov-body';
+    nodes.forEach(n => body.appendChild(n));
+    block.appendChild(body);
+    h3.classList.add('ov-toggle');
+    h3.setAttribute('role', 'button');
+    h3.setAttribute('tabindex', '0');
+    const open = !MOBILE;
+    h3.setAttribute('aria-expanded', String(open));
+    body.hidden = !open;
+    const toggle = () => {
+      const o = h3.getAttribute('aria-expanded') === 'true';
+      h3.setAttribute('aria-expanded', String(!o));
+      body.hidden = o;
+    };
+    h3.addEventListener('click', toggle);
+    h3.addEventListener('keydown', ev => {
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); toggle(); }
+    });
+  });
+})();
 
 buildTabs();
 render();
