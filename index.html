@@ -227,6 +227,7 @@
     background: transparent; border: 0; margin: 0;
     padding: 14px 2px 12px;
   }
+  .cat-ic{ width: 20px; height: 20px; flex: none; color: var(--accent); }
   .cat-name{ font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: .06em; color: var(--ink); }
   .cat-n{ font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .chev{ margin-left: auto; width: 18px; height: 18px; flex: none; color: var(--ink-soft); transition: transform .18s ease; }
@@ -729,10 +730,10 @@
 
 <script>
 const CATS = [
-  {key:'gongyi', label:'工艺专著', short:'工艺'},
-  {key:'tulu',   label:'墨锭图录', short:'图录'},
-  {key:'moshi',  label:'墨史藏墨', short:'墨史'},
-  {key:'shuyu',  label:'术语原料', short:'术语'},
+  {key:'gongyi', label:'工艺专著', short:'工艺', icon:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'},
+  {key:'tulu',   label:'墨锭图录', short:'图录', icon:'<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>'},
+  {key:'moshi',  label:'墨史藏墨', short:'墨史', icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'},
+  {key:'shuyu',  label:'术语原料', short:'术语', icon:'<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>'},
 ];
 
 const DATA = [
@@ -829,8 +830,7 @@ const els = {
   empty: document.getElementById('empty'),
 };
 let activeCat = 'all';
-const narrowMQ = window.matchMedia('(max-width: 680px)');
-const collapsed = new Set(narrowMQ.matches ? CATS.map(c => c.key) : []);
+const collapsed = new Set(CATS.slice(1).map(c => c.key));
 
 function norm(s){ return (s || '').toLowerCase().replace(/[《》「」·\s]/g, ''); }
 function hay(e){ return [e.name, e.meta, e.body, e.source, e.cat].concat(e.tags || []).join(' ').toLowerCase(); }
@@ -874,6 +874,7 @@ function renderGroups(rows){
     const open = !collapsed.has(c.key);
     return `<section class="cat-group" data-group="${c.key}">
       <button class="cat-head" aria-expanded="${open}" data-group="${c.key}">
+        <svg class="cat-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${c.icon}</svg>
         <span class="cat-name">${c.label}</span>
         <span class="cat-n">${items.length} 条</span>
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
